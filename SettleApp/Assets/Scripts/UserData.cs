@@ -9,27 +9,32 @@ public class UserData : MonoBehaviour
 {
     [SerializeField] TMP_Text Name;
     [SerializeField] TMP_Text Balance;
+    [SerializeField] TMP_Text MoneyPayed;
     [SerializeField]int UserId;
     MemberManager memberManager;
     [SerializeField] bool Paying;
     [SerializeField] Image PayingImage;
-    public void StartCard(string userName, float balance, int id, bool paying)
+    [SerializeField] TMP_Text UserIDText;
+    public void StartCard(string userName, float balance, float moneyPayed, int id, bool paying)
     {
+        memberManager = FindObjectOfType<MemberManager>();
         Name.text = userName;
         Balance.text = $"{Math.Round(balance, 2)}$";
         Debug.Log(balance);
         UserId = id;
+        UserIDText.text = UserId.ToString();
         Paying = paying;
+        MoneyPayed.text = $"Money payed: {Math.Round(moneyPayed, 2)}$";
     }
 
     public void RemoveUser()
     {
-        FindObjectOfType<MemberManager>().RemoveMember(UserId);
+        memberManager.RemoveMember(UserId);
     }
 
     public void PayingUser()
     {
-        FindObjectOfType<MemberManager>().IsPaying(UserId);
+        memberManager.IsPaying(UserId);
     }
 
     public void PayingColor()

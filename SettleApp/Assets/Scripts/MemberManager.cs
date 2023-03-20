@@ -16,23 +16,35 @@ public class MemberManager : MonoBehaviour
     [SerializeField] GameObject UserGO;
     [SerializeField] Transform UsersParent;
     User userCard;
-
     [SerializeField] TMP_InputField NameText;
     [SerializeField] TMP_InputField BalanceText;
     float tmpBalance;
-
+    [SerializeField] TMP_Dropdown UserDropdown;
     [SerializeField] TMP_InputField PaymentBalanceText;
-
-    [SerializeField] TMP_Text PayedMoneyText;
-    float payedMoney;
+    [SerializeField] TMP_Text AllPayedMoneyText;
+    [SerializeField] TMP_Text Datetext;
+    public float AllPayedMoney = 0;
+    float paymentValue;
+    int payers;
+    string dropdownValueText;
+    [SerializeField] Transform PaymentParent;
+    [SerializeField] GameObject PaymentGO;
     public class User
     {
         public string Name { get; set; }
         public float Balance { get; set; }
+        
+        public float MoneyPayedUser { get; set; }
         public int Id { get; set; }
         public bool Paying { get; set; }
+        
     }
 
+    public void Start()
+    {
+        UserDropdown.value = 0;
+        Datetext.text = DateTime.Now.ToString("dd.MM.yyyy");
+    }
 
     public void AddMember()
     {
@@ -43,7 +55,7 @@ public class MemberManager : MonoBehaviour
              NameText.text = $"User#{Random.Range(0,100)}";
          }
          
-         User newUser = new User { Name = NameText.text, Balance = (float)Math.Round(tmpBalance, 2), Id = Users.Count, Paying = false};
+         User newUser = new User { Name = NameText.text, Balance = (float)Math.Round(tmpBalance, 2), MoneyPayedUser = 0, Id = Users.Count, Paying = false};
          Users.Add(newUser);
          UpdateList();
          NameText.text = "";
@@ -54,13 +66,14 @@ public class MemberManager : MonoBehaviour
         foreach (Transform child in UsersParent) {
             Destroy(child.gameObject);
         }
-        
+        UserDropdown.options.Clear();
+
         foreach (var user in Users)
         {
             Debug.Log(user.Name + " " + user.Balance + " " + user.Id);
             GameObject tmpUser = Instantiate(UserGO, UsersParent);
-            tmpUser.GetComponent<UserData>().StartCard(user.Name,user.Balance, user.Id, user.Paying);
-            Debug.Log("ach");
+            tmpUser.GetComponent<UserData>().StartCard(user.Name,user.Balance, user.MoneyPayedUser ,user.Id, user.Paying);
+            UserDropdown.options.Add(new TMP_Dropdown.OptionData(text: user.Name));
         }
     }
 
@@ -72,21 +85,36 @@ public class MemberManager : MonoBehaviour
 
     public void CreatePayment()
     {
-        Debug.Log("funguje");
-        int payers = Users.Count(user => user.Paying);
+        payers = Users.Count(user => user.Paying);
+        if(string.IsNullOrEmpty(PaymentBalanceText.text) || payers == 0)
+            return;
+        paymentValue = float.Parse(PaymentBalanceText.text);
+        dropdownValueText = UserDropdown.options[UserDropdown.value].text;
+
+        foreach (var user in Users.Where(user => user.Name == dropdownValueText))
+        {
+            user.MoneyPayedUser += paymentValue;
+
+            if(user.Paying)
+                user.Balance = user.Balance += paymentValue / payers * (payers - 1);
+            else
+                user.Balance = user.Balance += paymentValue;
+
+            user.Paying = false;
+        }
+    
+        AllPayedMoney += paymentValue;
+        AllPayedMoneyText.text = $"Paid in total: {Math.Round(AllPayedMoney, 2).ToString(CultureInfo.InvariantCulture)}$";
+        
         foreach (var user in Users.Where(user => user.Paying))
         {
-            Debug.Log(user.Name);
-            if(string.IsNullOrEmpty(PaymentBalanceText.text)) return;
-
-            float paymentValue = float.Parse(PaymentBalanceText.text);
             user.Balance = user.Balance -= paymentValue / payers;
-            payedMoney += paymentValue;
-            PayedMoneyText.text = $"Paid in total: {Math.Round(payedMoney, 2).ToString(CultureInfo.InvariantCulture)}$"; 
             user.Paying = false;
         }
         UpdateList();
-        //PaymentBalanceText.text = "";
+
+        GameObject tmpPayment = Instantiate(PaymentGO, PaymentParent);
+        tmpPayment.GetComponent<PaymentData>().StartPaymentCard(dropdownValueText, paymentValue);
     }
 
     public void IsPaying(int id)
@@ -96,4 +124,5 @@ public class MemberManager : MonoBehaviour
             user.Paying = true;
         }
     }
+    
 }
